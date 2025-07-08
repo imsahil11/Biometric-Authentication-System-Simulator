@@ -59,7 +59,6 @@
 ---
 
 <div align="center">
-  <img src="https://img.icons8.com/color/96/000000/hacker.png" width="70"/>
   <img src="https://img.icons8.com/color/96/000000/lock-2.png" width="70"/>
   <img src="https://img.icons8.com/color/96/000000/security-checked.png" width="70"/>
 </div>
