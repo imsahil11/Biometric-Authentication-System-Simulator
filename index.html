@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Biometric Authentication System</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .info-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 60%, #764ba2 100%);
+            color: #fff;
+            font-size: 0.95em;
+            font-weight: bold;
+            border: none;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.10);
+            margin-left: 6px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+            outline: none;
+            position: relative;
+            padding: 0;
+        }
+        .info-btn:hover, .info-btn:focus {
+            background: linear-gradient(135deg, #764ba2 60%, #667eea 100%);
+            transform: scale(1.12) rotate(-8deg);
+            box-shadow: 0 4px 16px rgba(102,126,234,0.18);
+        }
+        .info-btn .info-icon {
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            font-weight: bold;
+            font-size: 0.95em;
+            line-height: 1;
+            display: block;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Advanced Biometric Authentication System</h1>
+            <p>Multi-Modal Security Authentication Simulator</p>
+        </div>
+
+        <!-- Authentication System (auth-grid) -->
+        <div class="auth-grid">
+            <div class="auth-panel">
+                <div class="panel-header">
+                    <div class="panel-icon">👁️</div>
+                    <div class="panel-title">Facial Recognition</div>
+                </div>
+                <div id="videoContainer">
+                    <video id="webcam" autoplay muted></video>
+                    <div class="face-overlay" id="faceOverlay"></div>
+                </div>
+                <div class="status-indicator status-waiting" id="faceStatus">
+                    <span>🟡 Initializing camera...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="faceProgress" style="width: 0%"></div>
+                </div>
+                <button class="btn" id="faceBtn" onclick="startFaceAuth()">Start Face Authentication</button>
+                <div class="biometric-data" id="faceData"></div>
+            </div>
+
+            <div class="auth-panel">
+                <div class="panel-header">
+                    <div class="panel-icon">🎤</div>
+                    <div class="panel-title">Voice Recognition</div>
+                </div>
+                <div class="voice-visualizer" id="voiceVisualizer">
+                    <div class="voice-bars" id="voiceBars"></div>
+                </div>
+                <div class="status-indicator status-waiting" id="voiceStatus">
+                    <span>🟡 Ready for voice authentication</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="voiceProgress" style="width: 0%"></div>
+                </div>
+                <button class="btn" id="voiceBtn" onclick="startVoiceAuth()">Start Voice Authentication</button>
+                <div class="biometric-data" id="voiceData"></div>
+            </div>
+
+            <div class="auth-panel">
+                <div class="panel-header">
+                    <div class="panel-icon">👆</div>
+                    <div class="panel-title">Fingerprint Scanner</div>
+                </div>
+                <div class="fingerprint-scanner" id="fingerprintScanner" onclick="startFingerprintAuth()">
+                    <div class="fingerprint-icon">🔍</div>
+                </div>
+                <div class="status-indicator status-waiting" id="fingerprintStatus">
+                    <span>🟡 Place finger on scanner</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="fingerprintProgress" style="width: 0%"></div>
+                </div>
+                <div class="biometric-data" id="fingerprintData"></div>
+            </div>
+
+            <div class="auth-panel">
+                <div class="panel-header">
+                    <div class="panel-icon">🔒</div>
+                    <div class="panel-title">Multi-Factor Authentication</div>
+                </div>
+                <div class="status-indicator status-waiting" id="mfaStatus">
+                    <span>🟡 Complete individual authentications first</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="mfaProgress" style="width: 0%"></div>
+                </div>
+                <button class="btn" id="mfaBtn" onclick="startMFAAuth()" disabled>Start Multi-Factor Auth</button>
+                <div class="biometric-data" id="mfaData"></div>
+            </div>
+        </div>
+
+        <!-- Security Features Panel (moved below authentication system) -->
+        <div class="security-features-panel">
+          <h3>Security Features</h3>
+          <div class="features-row">
+            <div class="toggle-tooltip">
+              <label class="switch">
+                <input type="checkbox" id="toggleLiveness" checked>
+                <span class="slider"></span>
+              </label>
+              <span class="toggle-label">Liveness Detection</span>
+              <span class="tooltip-text">Prevents spoofing by verifying the user is physically present (not a photo or mask).</span>
+            </div>
+            <div class="toggle-tooltip">
+              <label class="switch">
+                <input type="checkbox" id="toggleRateLimit" checked>
+                <span class="slider"></span>
+              </label>
+              <span class="toggle-label">Rate Limiting</span>
+              <span class="tooltip-text">Blocks brute force attacks by limiting the number of authentication attempts.</span>
+            </div>
+            <div class="toggle-tooltip">
+              <label class="switch">
+                <input type="checkbox" id="toggleAwareness" checked>
+                <span class="slider"></span>
+              </label>
+              <span class="toggle-label">Security Awareness Training</span>
+              <span class="tooltip-text">Educates users to recognize and resist social engineering attacks.</span>
+            </div>
+            <div class="toggle-tooltip">
+              <label class="switch">
+                <input type="checkbox" id="toggleAntiReplay" checked>
+                <span class="slider"></span>
+              </label>
+              <span class="toggle-label">Anti-Replay Protection</span>
+              <span class="tooltip-text">Prevents attackers from reusing captured authentication data.</span>
+            </div>
+          </div>
+          <div class="panel-desc">Toggle features ON/OFF to see their effect in the Attack Simulation Lab and Cybersecurity Analysis.</div>
+        </div>
+
+        <div class="admin-panel">
+            <div class="panel-header">
+                <div class="panel-icon">📊</div>
+                <div class="panel-title">Security Dashboard</div>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="successRate">0%</div>
+                    <div class="metric-label">Success Rate</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="totalAttempts">0</div>
+                    <div class="metric-label">Total Attempts</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="failedAttempts">0</div>
+                    <div class="metric-label">Failed Attempts</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="securityScore">100</div>
+                    <div class="metric-label">Security Score</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="threatLevel">LOW</div>
+                    <div class="metric-label">Threat Level</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="vulnerabilities">0</div>
+                    <div class="metric-label">Vulnerabilities</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="cybersecurity-panel">
+            <div class="panel-header">
+                <div class="panel-icon">🛡️</div>
+                <div class="panel-title">Cybersecurity Analysis</div>
+            </div>
+            
+            <div class="cyber-grid">
+                <div class="cyber-module">
+                    <h4>🔍 Penetration Testing <button class="info-btn" onclick="showInfo('pentest')" title="How it works & defense"><span class="info-icon">i</span></button></h4>
+                    <button class="btn cyber-btn" onclick="startPenetrationTest()">Run Pen Test</button>
+                    <div class="cyber-output" id="penTestOutput"></div>
+                </div>
+                
+                <div class="cyber-module">
+                    <h4>🚨 Threat Detection <button class="info-btn" onclick="showInfo('threat')" title="How it works & defense"><span class="info-icon">i</span></button></h4>
+                    <button class="btn cyber-btn" onclick="startThreatDetection()">Scan for Threats</button>
+                    <div class="cyber-output" id="threatOutput"></div>
+                </div>
+                
+                <div class="cyber-module">
+                    <h4>📡 Network Monitor <button class="info-btn" onclick="showInfo('network')" title="How it works & defense"><span class="info-icon">i</span></button></h4>
+                    <button class="btn cyber-btn" onclick="startNetworkMonitor()">Monitor Network</button>
+                    <div class="cyber-output" id="networkOutput"></div>
+                </div>
+                
+                <div class="cyber-module">
+                    <h4>🔐 Encryption Analysis <button class="info-btn" onclick="showInfo('encryption')" title="How it works & defense"><span class="info-icon">i</span></button></h4>
+                    <button class="btn cyber-btn" onclick="startEncryptionAnalysis()">Analyze Encryption</button>
+                    <div class="cyber-output" id="encryptionOutput"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="attack-simulation">
+            <div class="panel-header">
+                <div class="panel-icon">⚔️</div>
+                <div class="panel-title">Attack Simulation Lab</div>
+            </div>
+            
+            <div class="attack-grid">
+                <div class="attack-module">
+                    <h4>🎭 Spoofing Attack <button class="info-btn" onclick="showInfo('spoofing')" title="How it works & defense"><span class="info-icon">i</span></button></h4>
+                    <p>Simulate biometric spoofing attempts</p>
+                    <button class="btn attack-btn" onclick="simulateSpoofingAttack()">Launch Attack</button>
+                    <div class="attack-result" id="spoofingResult"></div>
+                </div>
+                
+                <div class="attack-module">
+                    <h4>🌊 Brute Force <button class="info-btn" onclick="showInfo('brute')" title="How it works & defense"><span class="info-icon">i</span></button></h4>
+                    <p>Test system against brute force attacks</p>
+                    <button class="btn attack-btn" onclick="simulateBruteForce()">Launch Attack</button>
+                    <div class="attack-result" id="bruteForceResult"></div>
+                </div>
+                
+                <div class="attack-module">
+                    <h4>🕷️ Social Engineering <button class="info-btn" onclick="showInfo('social')" title="How it works & defense"><span class="info-icon">i</span></button></h4>
+                    <p>Simulate social engineering tactics</p>
+                    <button class="btn attack-btn" onclick="simulateSocialEngineering()">Launch Attack</button>
+                    <div class="attack-result" id="socialEngResult"></div>
+                </div>
+                
+                <div class="attack-module">
+                    <h4>🔁 Replay Attack <button class="info-btn" onclick="showInfo('replay')" title="How it works & defense"><span class="info-icon">i</span></button></h4>
+                    <p>Test replay attack vulnerabilities</p>
+                    <button class="btn attack-btn" onclick="simulateReplayAttack()">Launch Attack</button>
+                    <div class="attack-result" id="replayResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="security-log">
+            <h3>Security Log</h3>
+            <div id="logEntries"></div>
+        </div>
+    </div>
+
+    <!-- Modal Popup HTML -->
+    <div class="custom-modal" id="customModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html>
