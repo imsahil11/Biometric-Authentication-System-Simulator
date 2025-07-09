@@ -67,8 +67,17 @@
                 <div class="progress-bar">
                     <div class="progress-fill" id="faceProgress" style="width: 0%"></div>
                 </div>
+                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
+                    <span style="font-weight: 500; color: #764ba2;">Face Auth Mode:</span>
+                    <label class="switch">
+                        <input type="checkbox" id="faceModeToggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span id="faceModeLabel" style="font-weight: 500; color: #667eea;">Real Backend</span>
+                </div>
                 <button class="btn" id="faceBtn" onclick="startFaceAuth()">Start Face Authentication</button>
                 <div class="biometric-data" id="faceData"></div>
+                <button class="btn btn-register-face" id="showRegisterFace" onclick="openRegisterFaceModal()">Register Face</button>
             </div>
 
             <div class="auth-panel">

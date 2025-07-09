@@ -739,3 +739,47 @@ input:checked + .slider:before {
   color: #666;
   margin-top: 10px;
 }
+.btn-register-face {
+  background: linear-gradient(90deg, #ffb347, #ffcc33);
+  color: #222;
+  font-weight: bold;
+  font-size: 18px;
+  border-radius: 30px;
+  box-shadow: 0 4px 16px rgba(255, 204, 51, 0.15);
+  transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
+  letter-spacing: 0.5px;
+  margin-top: 12px;
+  margin-bottom: 8px;
+  animation: pulseGlow 1.5s infinite alternate;
+}
+.btn-register-face:hover, .btn-register-face:focus {
+  background: linear-gradient(90deg, #ffcc33, #ffb347);
+  transform: scale(1.06);
+  box-shadow: 0 8px 32px rgba(255, 204, 51, 0.25);
+}
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 rgba(255, 204, 51, 0.15); }
+  100% { box-shadow: 0 0 16px 8px rgba(255, 204, 51, 0.18); }
+}
+.btn-confirm-register-face {
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  color: #fff;
+  font-weight: bold;
+  font-size: 20px;
+  border-radius: 30px;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
+  transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  padding: 14px 0;
+  animation: pulseGlowBlue 1.5s infinite alternate;
+}
+.btn-confirm-register-face:hover, .btn-confirm-register-face:focus {
+  background: linear-gradient(90deg, #764ba2, #667eea);
+  transform: scale(1.04);
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.25);
+}
+@keyframes pulseGlowBlue {
+  0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.10); }
+  100% { box-shadow: 0 0 16px 8px rgba(102, 126, 234, 0.18); }
+}

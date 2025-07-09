@@ -1,4 +1,3 @@
-
         // Global variables
         let webcamStream = null;
         let audioContext = null;
@@ -87,47 +86,120 @@
             });
         }
 
-        // Face authentication simulation
+        // --- Enhanced Face Authentication with Mode Toggle ---
+        // Update mode label on toggle
+        const faceModeToggle = document.getElementById('faceModeToggle');
+        const faceModeLabel = document.getElementById('faceModeLabel');
+        if (faceModeToggle && faceModeLabel) {
+            faceModeToggle.addEventListener('change', function() {
+                faceModeLabel.textContent = this.checked ? 'Real Backend' : 'Simulation';
+            });
+        }
+
+        // Enhanced startFaceAuth
         async function startFaceAuth() {
-            authData.attempts++;
-            updateMetrics();
-            
-            updateStatus('faceStatus', 'Analyzing facial features...', 'processing');
-            document.getElementById('faceBtn').disabled = true;
-            
-            // Simulate face detection
-            setTimeout(() => {
-                showFaceDetection();
-            }, 1000);
-            
-            // Simulate authentication process
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += Math.random() * 15;
-                document.getElementById('faceProgress').style.width = progress + '%';
-                
-                if (progress >= 100) {
-                    clearInterval(progressInterval);
-                    const success = Math.random() > 0.2; // 80% success rate
-                    
-                    if (success) {
-                        authData.face = true;
-                        updateStatus('faceStatus', 'Face authentication successful', 'success');
-                        document.getElementById('faceData').innerHTML = generateBiometricData('face');
-                        logActivity('Face authentication successful', 'success');
-                        showResultPopup(true, 'Face authentication successful');
+            const useBackend = document.getElementById('faceModeToggle')?.checked;
+            if (useBackend) {
+                // Real backend recognition
+                const image = getWebcamBase64();
+                showResultPopup(true, 'Recognizing...', { type: 'info' });
+                try {
+                    const res = await fetch('http://127.0.0.1:5000/recognize_face', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        if (data.name && data.name !== 'Unknown') {
+                            // You can add more fields to registration and show them here if available
+                            showResultPopup(
+                                true,
+                                'Face Recognized!',
+                                {
+                                    summary: `👤 <b>${data.name}</b> recognized!`,
+                                    findings: [
+                                        `Confidence: ${data.confidence ? data.confidence.toFixed(2) : 'N/A'}`
+                                        // Add more details here if your backend returns them
+                                    ],
+                                    tip: 'Welcome back, ' + data.name + '!',
+                                    type: 'success',
+                                    features: []
+                                }
+                            );
+                        } else {
+                            showResultPopup(
+                                false,
+                                'Face Not Recognized',
+                                {
+                                    summary: 'No match found in the database.',
+                                    findings: [],
+                                    tip: 'Try registering your face first or improve lighting/position.',
+                                    type: 'failure',
+                                    features: []
+                                }
+                            );
+                        }
                     } else {
-                        authData.failures++;
-                        updateStatus('faceStatus', 'Face authentication failed', 'error');
-                        logActivity('Face authentication failed', 'error');
-                        showResultPopup(false, 'Face authentication failed');
+                        showResultPopup(
+                            false,
+                            'Recognition Failed',
+                            {
+                                summary: data.error || 'Unknown error',
+                                findings: [],
+                                tip: 'Check your backend and try again.',
+                                type: 'failure',
+                                features: []
+                            }
+                        );
                     }
-                    
-                    document.getElementById('faceBtn').disabled = false;
-                    checkMFAReadiness();
-                    updateMetrics();
+                } catch (err) {
+                    showResultPopup(
+                        false,
+                        'Recognition Error',
+                        {
+                            summary: err.message,
+                            findings: [],
+                            tip: 'Is your backend running?',
+                            type: 'failure',
+                            features: []
+                        }
+                    );
                 }
-            }, 200);
+            } else {
+                // Simulation (original logic)
+                authData.attempts++;
+                updateMetrics();
+                updateStatus('faceStatus', 'Analyzing facial features...', 'processing');
+                document.getElementById('faceBtn').disabled = true;
+                setTimeout(() => {
+                    showFaceDetection();
+                }, 1000);
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 15;
+                    document.getElementById('faceProgress').style.width = progress + '%';
+                    if (progress >= 100) {
+                        clearInterval(progressInterval);
+                        const success = Math.random() > 0.2;
+                        if (success) {
+                            authData.face = true;
+                            updateStatus('faceStatus', 'Face authentication successful', 'success');
+                            document.getElementById('faceData').innerHTML = generateBiometricData('face');
+                            logActivity('Face authentication successful', 'success');
+                            showResultPopup(true, 'Face authentication successful');
+                        } else {
+                            authData.failures++;
+                            updateStatus('faceStatus', 'Face authentication failed', 'error');
+                            logActivity('Face authentication failed', 'error');
+                            showResultPopup(false, 'Face authentication failed');
+                        }
+                        document.getElementById('faceBtn').disabled = false;
+                        checkMFAReadiness();
+                        updateMetrics();
+                    }
+                }, 200);
+            }
         }
 
         // Show face detection overlay
@@ -1083,3 +1155,244 @@
             }
             showModal(html);
         }
+
+        // --- Real Face Registration & Recognition ---
+        // Helper: Capture current webcam frame as base64 PNG
+        function getWebcamBase64() {
+            const video = document.getElementById('webcam');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/png');
+        }
+
+        // Show the register face input and confirm button
+        function showRegisterFaceInput() {
+            document.getElementById('registerFaceForm').style.display = 'block';
+            document.getElementById('showRegisterFace').style.display = 'none';
+            document.getElementById('faceName').focus();
+        }
+
+        // Enhanced registerFace with progress bar and popup
+        async function registerFace() {
+            const name = document.getElementById('faceName').value.trim();
+            if (!name) {
+                showResultPopup(false, 'Please enter a name for registration.', { type: 'failure' });
+                return;
+            }
+            // Show progress bar
+            const progressBar = document.getElementById('registerFaceProgress');
+            const progressFill = document.getElementById('registerFaceProgressFill');
+            progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
+            document.getElementById('confirmRegisterFace').disabled = true;
+            document.getElementById('faceName').disabled = true;
+
+            // Animate progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 20 + 10;
+                if (progress > 100) progress = 100;
+                progressFill.style.width = progress + '%';
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    doRegisterFace(name);
+                }
+            }, 200);
+        }
+
+        // Actual registration logic (calls backend)
+        async function doRegisterFace(name) {
+            const image = getWebcamBase64();
+            try {
+                const res = await fetch('http://127.0.0.1:5000/register_face', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, image })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showResultPopup(true, 'Registration Successful', {
+                        summary: `👤 <b>${name}</b> registered!`,
+                        findings: [],
+                        tip: 'You can now authenticate with your face.',
+                        type: 'success',
+                        features: []
+                    });
+                } else {
+                    showResultPopup(false, 'Registration Failed', {
+                        summary: data.error || 'Unknown error',
+                        findings: [],
+                        tip: 'Try again or check your backend.',
+                        type: 'failure',
+                        features: []
+                    });
+                }
+            } catch (err) {
+                showResultPopup(false, 'Registration Error', {
+                    summary: err.message,
+                    findings: [],
+                    tip: 'Is your backend running?',
+                    type: 'failure',
+                    features: []
+                });
+            }
+            // Reset form (no reload, just UI reset)
+            document.getElementById('registerFaceForm').style.display = 'none';
+            document.getElementById('showRegisterFace').style.display = 'inline-block';
+            document.getElementById('faceName').value = '';
+            document.getElementById('faceName').disabled = false;
+            document.getElementById('confirmRegisterFace').disabled = false;
+            document.getElementById('registerFaceProgress').style.display = 'none';
+            document.getElementById('registerFaceProgressFill').style.width = '0%';
+        }
+
+        // Prevent form submission from reloading the page
+        document.addEventListener('DOMContentLoaded', function() {
+            const registerFaceForm = document.getElementById('registerFaceForm');
+            if (registerFaceForm) {
+                registerFaceForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+            }
+        });
+
+        // Recognize a face
+        async function recognizeFace() {
+            const image = getWebcamBase64();
+            showFaceRecognitionResult('Recognizing...', true);
+            const res = await fetch('http://127.0.0.1:5000/recognize_face', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image })
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (data.name && data.name !== 'Unknown') {
+                    showFaceRecognitionResult(
+                        `👤 <b>${data.name}</b> recognized!<br>Confidence: ${data.confidence.toFixed(2)}`,
+                        true
+                    );
+                } else {
+                    showFaceRecognitionResult('Face not recognized.', false);
+                }
+            } else {
+                showFaceRecognitionResult('❌ Recognition failed: ' + data.error, false);
+            }
+        }
+
+        // Show result in the UI
+        function showFaceRecognitionResult(msg, success) {
+            const el = document.getElementById('faceRecognitionResult');
+            el.innerHTML = msg;
+            el.style.color = success ? '#28a745' : '#dc3545';
+        }
+
+        let modalWebcamStream = null;
+
+        function openRegisterFaceModal() {
+  const webcam = document.getElementById('webcam');
+  const modalHtml = `
+    <div class='modal-title'>Register Your Face</div>
+    <div style='margin: 16px 0;'>
+      <video id='modalWebcamPreview' autoplay muted style='width: 100%; border-radius: 12px; background: #222;'></video>
+    </div>
+    <div style='font-size: 0.98em; color: #764ba2; margin-bottom: 10px;'>Tip: Center your face, look at the camera, and ensure good lighting.</div>
+    <input type='text' id='modalFaceName' placeholder='Enter your name' style='width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1.1em; margin-bottom: 16px;'>
+    <button class='btn btn-confirm-register-face' id='modalConfirmRegisterFace' style='width: 100%; font-size: 1.1em; margin-bottom: 12px;'>📸 Confirm Registration</button>
+    <div id='modalRegisterFaceProgress' style='height: 10px; background: #eee; border-radius: 5px; margin-bottom: 8px; display: none;'>
+      <div id='modalRegisterFaceProgressFill' style='height: 100%; width: 0%; background: linear-gradient(90deg,#667eea,#764ba2); border-radius: 5px; transition: width 0.3s;'></div>
+    </div>
+    <div id='modalRegisterFaceError' style='color: #dc3545; font-weight: 500; min-height: 24px;'></div>
+  `;
+  showModal(modalHtml);
+
+  // Use the main webcam stream for preview
+  const modalWebcam = document.getElementById('modalWebcamPreview');
+  if (webcam && webcam.srcObject) {
+    modalWebcam.srcObject = webcam.srcObject;
+  }
+
+  document.getElementById('modalConfirmRegisterFace').onclick = async function() {
+    const name = document.getElementById('modalFaceName').value.trim();
+    const errorDiv = document.getElementById('modalRegisterFaceError');
+    if (!name) {
+      errorDiv.textContent = 'Please enter your name.';
+      return;
+    }
+    errorDiv.textContent = '';
+    this.disabled = true;
+    document.getElementById('modalFaceName').disabled = true;
+    const progressBar = document.getElementById('modalRegisterFaceProgress');
+    const progressFill = document.getElementById('modalRegisterFaceProgressFill');
+    progressBar.style.display = 'block';
+    progressFill.style.width = '0%';
+    // Animate progress
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 20 + 10;
+      if (progress > 100) progress = 100;
+      progressFill.style.width = progress + '%';
+      if (progress >= 100) {
+        clearInterval(interval);
+        doRegisterFaceModal(name, modalWebcam);
+      }
+    }, 200);
+  };
+}
+
+async function doRegisterFaceModal(name, modalWebcam) {
+  // Capture image from modal webcam (main webcam stream)
+  let image;
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = modalWebcam.videoWidth || 640;
+    canvas.height = modalWebcam.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(modalWebcam, 0, 0, canvas.width, canvas.height);
+    image = canvas.toDataURL('image/png');
+  } catch (e) {
+    document.getElementById('modalRegisterFaceError').textContent = 'Could not capture webcam image.';
+    return;
+  }
+  try {
+    const res = await fetch('http://127.0.0.1:5000/register_face', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, image })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeModal();
+      showResultPopup(true, 'Registration Successful', {
+        summary: `👤 <b>${name}</b> registered!`,
+        findings: [],
+        tip: 'You can now authenticate with your face.',
+        type: 'success',
+        features: []
+      });
+    } else {
+      document.getElementById('modalRegisterFaceError').textContent = data.error || 'Unknown error.';
+      document.getElementById('modalConfirmRegisterFace').disabled = false;
+      document.getElementById('modalFaceName').disabled = false;
+    }
+  } catch (err) {
+    document.getElementById('modalRegisterFaceError').textContent = err.message;
+    document.getElementById('modalConfirmRegisterFace').disabled = false;
+    document.getElementById('modalFaceName').disabled = false;
+  }
+}
+
+        window.addEventListener('error', function(event) {
+          showResultPopup(false, 'JavaScript Error', {
+            summary: event.message,
+            findings: [event.filename + ':' + event.lineno],
+            tip: 'Check the console for more details.',
+            type: 'failure',
+            features: []
+          });
+          event.preventDefault();
+        });
