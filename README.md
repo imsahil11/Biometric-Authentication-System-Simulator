@@ -34,15 +34,75 @@
 
 ---
 
-## 🚦 **How to Use**
+## 🚀 NEW: Real Face & Voice Recognition (with Backend)
 
-> **1.** _Open_ `index.html` in your browser.  
-> **2.** _Try_ the authentication panels (face, voice, fingerprint, MFA).  
-> **3.** _Toggle_ security features below the authentication system to see their effect.  
-> **4.** _Run attacks_ in the Attack Simulation Lab and see if your defenses hold up!  
-> **5.** _Analyze your system_ in the Cybersecurity Analysis section.  
-> **6.** _Watch the dashboard_ update in real time as you interact.  
-> **7.** _Hover over toggles_ and click ℹ️ buttons for instant explanations and tips.
+### ✨ Features
+- **Facial Recognition**: Register and recognize faces using your webcam, powered by OpenCV and Flask.
+- **Voice (Speaker) Recognition**: Register and recognize your voice (who you are, not just what you say) using your microphone, powered by resemblyzer and Flask.
+- **Live Biometric Authentication**: All processing is done in real time with a modern web UI.
+
+---
+
+## 🛠️ Setup & Installation
+
+### 1. Clone the Repository
+```sh
+git clone <repo-url>
+cd <repo-folder>
+```
+
+### 2. Install Python Dependencies
+Make sure you have Python 3.8+ installed.
+
+```sh
+pip install flask flask_cors numpy opencv-python pillow resemblyzer soundfile pydub
+```
+
+### 3. Install ffmpeg (Required for Voice Recognition)
+- Download ffmpeg for Windows: [ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+- Extract the zip, copy the `bin` folder path (e.g., `C:\ffmpeg\bin`)
+- Add it to your Windows PATH:
+  - Open "Edit the system environment variables" → Environment Variables → System variables → Path → Edit → New → Paste the path → OK
+- Restart your terminal and test:
+```sh
+ffmpeg -version
+```
+You should see version info, not an error.
+
+### 4. Run the Backend
+```sh
+python backend.py
+```
+The backend will start at `http://127.0.0.1:5000`
+
+### 5. Open the Frontend
+Just open `index.html` in your browser (Chrome recommended).
+
+---
+
+## 🧑‍💻 Usage
+- **Allow camera and microphone access** when prompted by your browser.
+- Use the UI to register your face and voice, then try authenticating.
+- All biometric data is stored locally in the `registered_faces` and `registered_voices` folders.
+
+---
+
+## 🛡️ API Endpoints (Backend)
+
+### Face
+- `POST /register_face` — Register a face (JSON: `{name, image}` [base64])
+- `POST /recognize_face` — Recognize a face (JSON: `{image}` [base64])
+
+### Voice
+- `POST /register_voice` — Register a voice (FormData: `name`, `audio` [webm])
+- `POST /recognize_voice` — Recognize a voice (FormData: `audio` [webm])
+
+---
+
+## 🐞 Troubleshooting
+- If you see errors about audio format, make sure ffmpeg is installed and in your PATH.
+- If the webcam or mic doesn't work, check browser permissions and use `localhost` (not `file://`).
+- For best results, use Chrome or Edge.
 
 ---
 

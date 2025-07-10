@@ -94,8 +94,9 @@
                 <div class="progress-bar">
                     <div class="progress-fill" id="voiceProgress" style="width: 0%"></div>
                 </div>
-                <button class="btn" id="voiceBtn" onclick="startVoiceAuth()">Start Voice Authentication</button>
+                <button class="btn" id="voiceBtn" type="button" onclick="startVoiceAuth()">Start Voice Authentication</button>
                 <div class="biometric-data" id="voiceData"></div>
+                <button class="btn btn-register-voice" id="showRegisterVoice" type="button" onclick="openRegisterVoiceModal()">Register Voice</button>
             </div>
 
             <div class="auth-panel">
@@ -286,6 +287,25 @@
             <button class="modal-close" onclick="closeModal()">&times;</button>
             <div id="modalBody"></div>
         </div>
+    </div>
+
+    <!-- Voice Registration Modal -->
+    <div id="voiceRegisterModal" class="modal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center;">
+      <div class="modal-content" style="background:white; border-radius:12px; padding:32px; max-width:400px; margin:auto; position:relative;">
+        <span class="close" id="closeVoiceRegisterModal" style="position:absolute; right:16px; top:12px; font-size:1.8em; cursor:pointer;">&times;</span>
+        <div class="modal-title" style="font-size:1.3em; font-weight:600; margin-bottom:12px;">Register Your Voice</div>
+        <div style="margin: 16px 0;">
+          <div id="voiceRecordStatus" style="margin-bottom: 10px; color: #764ba2;">Press Record and say any sentence clearly.</div>
+          <input type="text" id="voiceName" placeholder="Enter your name" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 1.1em; margin-bottom: 16px;">
+          <button class="btn" id="startVoiceRecord">🎤 Record</button>
+          <button class="btn" id="stopVoiceRecord" style="display:none;">⏹️ Stop</button>
+          <button class="btn btn-confirm-register-voice" id="confirmRegisterVoice" style="width: 100%; font-size: 1.1em; margin-top: 12px;" disabled>Register Voice</button>
+          <div id="registerVoiceProgress" style="height: 10px; background: #eee; border-radius: 5px; margin-top: 8px; display: none;">
+            <div id="registerVoiceProgressFill" style="height: 100%; width: 0%; background: linear-gradient(90deg,#667eea,#764ba2); border-radius: 5px; transition: width 0.3s;"></div>
+          </div>
+          <div id="registerVoiceError" style="color: #dc3545; font-weight: 500; min-height: 24px; margin-top: 8px;"></div>
+        </div>
+      </div>
     </div>
     <script src="main.js"></script>
 </body>

@@ -22,6 +22,8 @@
             threatLevel: 'LOW'
         };
 
+        let modalWebcamStream = null;
+
         // Initialize the system
         async function initializeSystem() {
             await initializeWebcam();
@@ -1291,8 +1293,6 @@
             el.style.color = success ? '#28a745' : '#dc3545';
         }
 
-        let modalWebcamStream = null;
-
         function openRegisterFaceModal() {
   const webcam = document.getElementById('webcam');
   const modalHtml = `
@@ -1386,6 +1386,238 @@ async function doRegisterFaceModal(name, modalWebcam) {
   }
 }
 
+        // --- Voice Registration Modal Logic ---
+        let voiceMediaRecorder, voiceAudioChunks = [], voiceBlob = null;
+
+        function openRegisterVoiceModal() {
+            document.getElementById('voiceRegisterModal').style.display = 'flex';
+            document.getElementById('voiceName').value = '';
+            document.getElementById('registerVoiceError').textContent = '';
+            document.getElementById('registerVoiceProgress').style.display = 'none';
+            document.getElementById('registerVoiceProgressFill').style.width = '0%';
+            document.getElementById('startVoiceRecord').style.display = 'inline-block';
+            document.getElementById('stopVoiceRecord').style.display = 'none';
+            document.getElementById('confirmRegisterVoice').disabled = true;
+            voiceBlob = null;
+        }
+        document.getElementById('showRegisterVoice').onclick = openRegisterVoiceModal;
+        document.getElementById('closeVoiceRegisterModal').onclick = function() {
+            document.getElementById('voiceRegisterModal').style.display = 'none';
+            if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') voiceMediaRecorder.stop();
+        };
+
+        document.getElementById('startVoiceRecord').onclick = async function() {
+            voiceAudioChunks = [];
+            document.getElementById('voiceRecordStatus').textContent = 'Recording... Speak now!';
+            document.getElementById('startVoiceRecord').style.display = 'none';
+            document.getElementById('stopVoiceRecord').style.display = 'inline-block';
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            voiceMediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            voiceMediaRecorder.ondataavailable = e => voiceAudioChunks.push(e.data);
+            voiceMediaRecorder.onstop = () => {
+                voiceBlob = new Blob(voiceAudioChunks, { type: 'audio/webm' });
+                document.getElementById('voiceRecordStatus').textContent = 'Recording complete.';
+                document.getElementById('confirmRegisterVoice').disabled = false;
+                stream.getTracks().forEach(track => track.stop());
+            };
+            voiceMediaRecorder.start();
+        };
+        document.getElementById('stopVoiceRecord').onclick = function() {
+            if (voiceMediaRecorder && voiceMediaRecorder.state !== 'inactive') voiceMediaRecorder.stop();
+            document.getElementById('stopVoiceRecord').style.display = 'none';
+            document.getElementById('startVoiceRecord').style.display = 'inline-block';
+        };
+        document.getElementById('confirmRegisterVoice').onclick = async function() {
+            const name = document.getElementById('voiceName').value.trim();
+            if (!name) {
+                document.getElementById('registerVoiceError').textContent = 'Please enter your name.';
+                return;
+            }
+            if (!voiceBlob) {
+                document.getElementById('registerVoiceError').textContent = 'Please record your voice.';
+                return;
+            }
+            document.getElementById('registerVoiceError').textContent = '';
+            document.getElementById('registerVoiceProgress').style.display = 'block';
+            document.getElementById('registerVoiceProgressFill').style.width = '0%';
+            document.getElementById('confirmRegisterVoice').disabled = true;
+            // Convert to WAV/16kHz on backend if needed
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('audio', voiceBlob, 'audio.webm');
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 20 + 10;
+                if (progress > 100) progress = 100;
+                document.getElementById('registerVoiceProgressFill').style.width = progress + '%';
+                if (progress >= 100) clearInterval(interval);
+            }, 200);
+            try {
+                const res = await fetch('http://127.0.0.1:5000/register_voice', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('voiceRegisterModal').style.display = 'none';
+                    showResultPopup(true, 'Voice Registration Successful', {
+                        summary: `🎤 <b>${name}</b> registered!`,
+                        findings: [],
+                        tip: 'You can now authenticate with your voice.',
+                        type: 'success',
+                        features: []
+                    });
+                } else {
+                    document.getElementById('registerVoiceError').textContent = data.error || 'Unknown error.';
+                    document.getElementById('confirmRegisterVoice').disabled = false;
+                }
+            } catch (err) {
+                document.getElementById('registerVoiceError').textContent = err.message;
+                document.getElementById('confirmRegisterVoice').disabled = false;
+            }
+        };
+
+        // --- Real Voice Authentication (Backend) ---
+        async function startVoiceAuth() {
+            const useBackend = true; // Always use backend for real voice auth
+            if (useBackend) {
+                // Record audio for recognition
+                let audioChunks = [], recBlob = null;
+                updateStatus('voiceStatus', 'Listening for voice pattern...', 'processing');
+                document.getElementById('voiceBtn').disabled = true;
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                rec.ondataavailable = e => audioChunks.push(e.data);
+                rec.onstop = async () => {
+                    recBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    stream.getTracks().forEach(track => track.stop());
+                    // Send to backend
+                    const formData = new FormData();
+                    formData.append('audio', recBlob, 'audio.webm');
+                    try {
+                        const res = await fetch('http://127.0.0.1:5000/recognize_voice', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const data = await res.json();
+                        if (data.success && data.name && data.name !== 'Unknown') {
+                            showResultPopup(true, 'Voice Recognized!', {
+                                summary: `🎤 <b>${data.name}</b> recognized!`,
+                                findings: [
+                                    `Score: ${data.score ? data.score.toFixed(2) : 'N/A'}`
+                                ],
+                                tip: 'Welcome back, ' + data.name + '!',
+                                type: 'success',
+                                features: []
+                            });
+                            updateStatus('voiceStatus', 'Voice authentication successful', 'success');
+                            document.getElementById('voiceData').innerHTML = generateBiometricData('voice');
+                        } else if (data.success && data.name === 'Unknown') {
+                            showResultPopup(false, 'Voice Not Recognized', {
+                                summary: 'No match found in the database.',
+                                findings: [
+                                    `Score: ${data.score ? data.score.toFixed(2) : 'N/A'}`
+                                ],
+                                tip: 'Try registering your voice first.',
+                                type: 'failure',
+                                features: []
+                            });
+                            updateStatus('voiceStatus', 'Voice authentication failed', 'error');
+                        } else {
+                            showResultPopup(false, 'Recognition Failed', {
+                                summary: data.error || 'Unknown error',
+                                findings: [],
+                                tip: 'Check your backend and try again.',
+                                type: 'failure',
+                                features: []
+                            });
+                            updateStatus('voiceStatus', 'Voice authentication failed', 'error');
+                        }
+                    } catch (err) {
+                        showResultPopup(false, 'Recognition Error', {
+                            summary: err.message,
+                            findings: [],
+                            tip: 'Is your backend running?',
+                            type: 'failure',
+                            features: []
+                        });
+                        updateStatus('voiceStatus', 'Voice authentication failed', 'error');
+                    }
+                    document.getElementById('voiceBtn').disabled = false;
+                    checkMFAReadiness();
+                    updateMetrics();
+                };
+                rec.start();
+                setTimeout(() => {
+                    if (rec.state !== 'inactive') rec.stop();
+                }, 3000); // Record for 3 seconds
+            } else {
+                // Simulation (original logic)
+                authData.attempts++;
+                updateMetrics();
+                updateStatus('voiceStatus', 'Listening for voice pattern...', 'processing');
+                document.getElementById('voiceBtn').disabled = true;
+                setTimeout(() => {
+                    showFaceDetection();
+                }, 1000);
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 12;
+                    document.getElementById('voiceProgress').style.width = progress + '%';
+                    if (progress >= 100) {
+                        clearInterval(progressInterval);
+                        const success = Math.random() > 0.25; // 75% success rate
+                        if (success) {
+                            authData.voice = true;
+                            updateStatus('voiceStatus', 'Voice authentication successful', 'success');
+                            document.getElementById('voiceData').innerHTML = generateBiometricData('voice');
+                            logActivity('Voice authentication successful', 'success');
+                            showResultPopup(true, 'Voice authentication successful');
+                        } else {
+                            authData.failures++;
+                            updateStatus('voiceStatus', 'Voice authentication failed', 'error');
+                            logActivity('Voice authentication failed', 'error');
+                            showResultPopup(false, 'Voice authentication failed');
+                        }
+                        document.getElementById('voiceBtn').disabled = false;
+                        checkMFAReadiness();
+                        updateMetrics();
+                    }
+                }, 250);
+            }
+        }
+
+        // Recognize a face
+        async function recognizeFace() {
+            const image = getWebcamBase64();
+            showFaceRecognitionResult('Recognizing...', true);
+            const res = await fetch('http://127.0.0.1:5000/recognize_face', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image })
+            });
+            const data = await res.json();
+            if (data.success) {
+                if (data.name && data.name !== 'Unknown') {
+                    showFaceRecognitionResult(
+                        `👤 <b>${data.name}</b> recognized!<br>Confidence: ${data.confidence.toFixed(2)}`,
+                        true
+                    );
+                } else {
+                    showFaceRecognitionResult('Face not recognized.', false);
+                }
+            } else {
+                showFaceRecognitionResult('❌ Recognition failed: ' + data.error, false);
+            }
+        }
+
+        // Show result in the UI
+        function showFaceRecognitionResult(msg, success) {
+            const el = document.getElementById('faceRecognitionResult');
+            el.innerHTML = msg;
+            el.style.color = success ? '#28a745' : '#dc3545';
+        }
+
         window.addEventListener('error', function(event) {
           showResultPopup(false, 'JavaScript Error', {
             summary: event.message,
@@ -1396,3 +1628,8 @@ async function doRegisterFaceModal(name, modalWebcam) {
           });
           event.preventDefault();
         });
+
+        // At the end of the file, expose functions to global scope for HTML onclick
+        window.openRegisterVoiceModal = openRegisterVoiceModal;
+        window.openRegisterFaceModal = openRegisterFaceModal;
+        window.startFingerprintAuth = startFingerprintAuth;
